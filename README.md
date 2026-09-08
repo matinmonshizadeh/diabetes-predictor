@@ -1,56 +1,74 @@
-<div align="center">
-  <h1><strong>Diabet Predictor</strong></h1>
-  <p><strong>The Diabetes Predictor Desktop Application is a user-friendly tool that utilizes a logistic regression model to predict the probability of a user having diabetes based on their inputted information. The application features a custom implementation of the logistic regression algorithm, an intuitive graphical user interface (GUI), and the ability to train the model on custom datasets. It aims to aid in early detection and proactive healthcare interventions for diabetes management.</strong></p>
-</div>
+# Diabetes Predictor
 
-![Screenshot (140)](https://github.com/Roodaki/Diabet-Predictor/assets/89901590/3c0eaefc-64cf-4f00-81ad-3317bcdfa14f)
+Logistic regression written from scratch in NumPy, trained on the Pima Indians Diabetes dataset, with a small PyQt5 desktop form that shows the predicted probability.
 
-## Table of Contents
-- [Intruduction](#intruduction)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Requirements](#requirements)
-- [Usage Guide](#usage-guide)
+![Screenshot of the PyQt5 form](docs/app.png)
 
-## Intruduction
-Diabetes is a prevalent and chronic disease that affects millions of people worldwide. Early detection and accurate prediction of diabetes can significantly improve patient outcomes and guide proactive healthcare interventions. In this project, we have developed a desktop application that utilizes a logistic regression model to predict whether a person has diabetes based on their inputted information.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-The application employs a logistic regression algorithm, implemented from scratch, to analyze various patient attributes such as age, body mass index (BMI), blood pressure, and glucose levels. By training the model on a dataset containing these attributes along with corresponding labels (0 for no diabetes, 1 for diabetes), it learns to distinguish between diabetic and non-diabetic individuals. The trained model is then used to predict the probability of a user having diabetes based on their input.
+## Overview
 
-## Features
-- Full Implementation of Logistic Regression: The logistic regression algorithm is implemented from scratch, allowing for a comprehensive understanding of the underlying principles and complete control over the training process. This implementation ensures that the application is not reliant on external libraries for logistic regression.
-- Customizable Model Training: Users can train the logistic regression model on their own dataset. By providing a properly formatted CSV file with the necessary attributes and labels, users can tailor the model to their specific requirements and datasets.
-- Diabetes Prediction: Based on the inputted information, the application predicts whether the user has diabetes or not. The application provides accurate predictions and enables early detection by leveraging the logistic regression model.
-- User-friendly Interface: The application provides a graphical user interface (GUI) that allows users to input their information easily. The interface is intuitive, making it simple for users to provide their details for prediction.
+- Course project for Artificial Intelligence, Shiraz University, July 2023.
+- Authors: Matin Monshizadeh and [AmirHossein Roodaki](https://github.com/Roodaki).
+- Dataset: Pima Indians Diabetes Database, 768 rows, 8 numeric features, binary `Outcome`.
+- The assignment required implementing logistic regression without a library. scikit-learn is used only for the train/test split, the metrics and a sanity-check comparison.
 
-## Project Structure
-The project follows a specific structure to organize its files and directories:
+## The model
+
+`model.py` implements binary logistic regression with no machine-learning library:
+
+- Features are standardised (zero mean, unit variance) with statistics computed on the training split only.
+- Prediction is `sigmoid(X @ w + b)`, using a numerically stable sigmoid.
+- The loss is the mean binary cross-entropy.
+- Training is full-batch gradient descent: `dw = X.T @ (p - y) / n`, `db = mean(p - y)`, 3000 steps at learning rate 0.1, with a fixed random seed.
+- `predict_proba` returns probabilities; `predict` applies a 0.5 threshold.
+
+## Results
+
+Stratified 80/20 split (seed 42), 614 training rows and 154 test rows. Both models are trained on the same standardised features.
+
+| Metric    | Ours  | scikit-learn |
+|-----------|-------|--------------|
+| Accuracy  | 0.714 | 0.714        |
+| Precision | 0.609 | 0.609        |
+| Recall    | 0.519 | 0.519        |
+| ROC-AUC   | 0.824 | 0.823        |
+
+The learned weights agree with scikit-learn to about two decimal places (see the output of `train.py`). Glucose and BMI carry the largest positive weights.
+
+## Usage
+
+```bash
+git clone https://github.com/matinmonshizadeh/diabetes-predictor.git
+cd diabetes-predictor
+pip install -r requirements.txt
+python train.py   # trains, prints the comparison table, writes models/
+python app.py     # opens the form
 ```
-diabetes-prediction-app/
-├── main.py
-├── model.py
-├── IO.py
-├── samples.csv
-├── README.md
-└── .gitignore
+
+`train.py` is deterministic and takes a few seconds. `app.py` loads `models/diabetes_lr.json`, validates the eight inputs, and shows the estimated probability of diabetes.
+
+## Project structure
+
 ```
-- `main.py`: Main script file that runs the diabetes prediction application.
-- `model.py`: File containing the implementation of the logistic regression model.
-- `IO.py`: File containing the input/output operations and GUI code for the application.
-- `samples.csv`: CSV file containing sample data for training and testing the model.
-- `README.md`: Documentation file providing information about the project.
-- `.gitignore`: File that specifies which files and directories should be ignored by Git version control.
+data/diabetes.csv        dataset (768 rows)
+model.py                 from-scratch logistic regression and scaler
+train.py                 training, evaluation, sklearn comparison, saves models/
+app.py                   PyQt5 form that loads the saved model
+models/diabetes_lr.json  weights, bias and scaler statistics
+models/metrics.json      test-set metrics for both models
+docs/app.png             screenshot
+```
 
-## Requirements
-To run the Diabetes Prediction Desktop Application, you need to have the following installed on your system:
-* Python (version 3.0 or higher)
-* Python libraries:
-  * scikit-learn
-  * PyQt
-* Git command line tool (or Git GUI client) to clone the repository.
+## Limitations
 
-## Usage Guide
-1. Open a terminal and clone this repository: `git clone https://github.com/Roodaki/Diabet-Predictor.git`
-2. Prepare the Dataset: The application requires a properly formatted CSV file dataset with the necessary attributes and labels (0 for no diabetes, 1 for diabetes). Ensure that the dataset is ready for training and testing the logistic regression model.
-4. Run the Application: Run the application's `main.py` script to train the logistic regression model on the provided dataset and launch the graphical user interface (GUI) where users can input their information and receive diabetes predictions based on the trained model.
-5. Interact with the Application: Input the patient's information, such as age, BMI, blood pressure, and glucose levels, through the GUI. After entering the information, click on the "Predict" button to obtain the diabetes prediction result. The application will display the prediction outcome on the GUI.
+- Tiny dataset (768 rows from one population), so the metrics have wide error bars and the model will not transfer to other groups.
+- Educational demo, not medical advice. It must not be used to diagnose anyone.
+- Probabilities are not calibrated and the 0.5 threshold was not tuned.
+- The dataset encodes missing values as 0 (for example Glucose or BMI of 0); this project does not impute them.
+
+## Licence and credits
+
+Code is released under the [MIT License](LICENSE), copyright 2023 Matin Monshizadeh and AmirHossein Roodaki.
+
+The dataset is the Pima Indians Diabetes Database, originally from the National Institute of Diabetes and Digestive and Kidney Diseases (Smith, J. W. et al., 1988, *Using the ADAP learning algorithm to forecast the onset of diabetes mellitus*, Proc. Symp. Computer Applications and Medical Care, 261 to 265). `data/diabetes.csv` is the copy distributed on Kaggle as [uciml/pima-indians-diabetes-database](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database) under the CC0 1.0 Public Domain licence, and is byte-identical to the mirrors in the `plotly/datasets` and `jbrownlee/Datasets` GitHub repositories.
